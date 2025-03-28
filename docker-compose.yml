@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb+srv://Pratik:44pratik812@cluster0.fnlfobb.mongodb.net/speech-therapy?retryWrites=true&w=majority
+      - JWT_SECRET=964f71807e1283af1038164cf0cbd6022394c091b3c173b37f1707ef49d33575
+      - NODE_ENV=production
+    volumes:
+      - ./server/backups:/usr/src/app/backups
+    restart: unless-stopped 

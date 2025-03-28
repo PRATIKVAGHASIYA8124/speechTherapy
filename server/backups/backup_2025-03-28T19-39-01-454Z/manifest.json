@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-03-28T19:39:01.457Z",
+  "version": "1.0.0",
+  "database": "speech-therapy",
+  "backupType": "full",
+  "contents": {
+    "database": true,
+    "files": true
+  }
+}
