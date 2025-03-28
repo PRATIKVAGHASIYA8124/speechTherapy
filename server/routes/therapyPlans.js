@@ -7,13 +7,25 @@ const TherapyPlan = require('../models/TherapyPlan');
 router.get('/', auth, async (req, res) => {
   try {
     const { patient } = req.query;
-    const query = { therapist: req.user.id };
+    console.log('Fetching therapy plans for patient:', patient);
+    const query = {};
     if (patient) {
       query.patient = patient;
     }
-    const therapyPlans = await TherapyPlan.find(query).populate('patient', 'name');
+    console.log('Query:', query);
+    const therapyPlans = await TherapyPlan.find(query)
+      .populate('patient', 'name')
+      .populate('therapist', 'name')
+      .populate('supervisor', 'name');
+    console.log('Found therapy plans:', therapyPlans);
+    
+    if (!therapyPlans || therapyPlans.length === 0) {
+      return res.json([]); // Return empty array instead of error
+    }
+    
     res.json(therapyPlans);
   } catch (err) {
+    console.error('Error fetching therapy plans:', err);
     res.status(500).json({ message: err.message });
   }
 });

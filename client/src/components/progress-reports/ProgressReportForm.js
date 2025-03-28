@@ -11,7 +11,6 @@ import {
   Alert,
   CircularProgress,
   MenuItem,
-  Slider,
   FormControl,
   InputLabel,
   Select
@@ -21,18 +20,22 @@ import { useAuth } from '../../contexts/AuthContext';
 const ProgressReportForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [formData, setFormData] = useState({
     patient: '',
-    date: new Date().toISOString().split('T')[0],
-    status: 'in progress',
-    progress: 0,
-    notes: '',
-    goals: '',
-    challenges: '',
-    nextSteps: ''
+    therapyPlan: '',
+    sessionDetails: {
+      date: new Date().toISOString().split('T')[0],
+      duration: '',
+      activitiesPerformed: []
+    },
+    goalProgress: [],
+    observations: '',
+    recommendations: '',
+    status: 'draft'
   });
   const [patients, setPatients] = useState([]);
+  const [therapyPlans, setTherapyPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -55,6 +58,18 @@ const ProgressReportForm = () => {
     }
   };
 
+  const fetchTherapyPlans = async (patientId) => {
+    try {
+      console.log('Fetching therapy plans for patient:', patientId);
+      const response = await api.get(`/therapy-plans?patient=${patientId}`);
+      console.log('Therapy plans response:', response.data);
+      setTherapyPlans(response.data);
+    } catch (err) {
+      console.error('Error fetching therapy plans:', err);
+      setError('Failed to fetch therapy plans. Please try again later.');
+    }
+  };
+
   const fetchReport = async () => {
     try {
       setLoading(true);
@@ -70,17 +85,28 @@ const ProgressReportForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
-  const handleProgressChange = (event, newValue) => {
-    setFormData(prev => ({
-      ...prev,
-      progress: newValue
-    }));
+  const handlePatientChange = async (e) => {
+    const patientId = e.target.value;
+    console.log('Patient selected:', patientId);
+    handleChange(e);
+    await fetchTherapyPlans(patientId);
   };
 
   const handleSubmit = async (e) => {
@@ -88,10 +114,15 @@ const ProgressReportForm = () => {
     try {
       setLoading(true);
       setError(null);
+      const reportData = {
+        ...formData,
+        therapist: user._id
+      };
+      
       if (isEditing) {
-        await api.put(`/progress-reports/${id}`, formData);
+        await api.put(`/progress-reports/${id}`, reportData);
       } else {
-        await api.post('/progress-reports', formData);
+        await api.post('/progress-reports', reportData);
       }
       navigate('/progress-reports');
     } catch (err) {
@@ -131,7 +162,7 @@ const ProgressReportForm = () => {
                 <Select
                   name="patient"
                   value={formData.patient}
-                  onChange={handleChange}
+                  onChange={handlePatientChange}
                   label="Patient"
                   disabled={loading}
                 >
@@ -144,13 +175,38 @@ const ProgressReportForm = () => {
               </FormControl>
             </Grid>
 
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Therapy Plan</InputLabel>
+                <Select
+                  name="therapyPlan"
+                  value={formData.therapyPlan}
+                  onChange={handleChange}
+                  label="Therapy Plan"
+                  disabled={loading || !formData.patient}
+                >
+                  {therapyPlans.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      No therapy plans found for this patient
+                    </MenuItem>
+                  ) : (
+                    therapyPlans.map((plan) => (
+                      <MenuItem key={plan._id} value={plan._id}>
+                        {plan.title || `Plan by ${plan.therapist?.name || 'Unknown Therapist'} (${new Date(plan.startDate).toLocaleDateString()})`}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Date"
-                name="date"
+                label="Session Date"
+                name="sessionDetails.date"
                 type="date"
-                value={formData.date}
+                value={formData.sessionDetails.date}
                 onChange={handleChange}
                 required
                 disabled={loading}
@@ -159,6 +215,20 @@ const ProgressReportForm = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Session Duration (minutes)"
+                name="sessionDetails.duration"
+                type="number"
+                value={formData.sessionDetails.duration}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -168,75 +238,37 @@ const ProgressReportForm = () => {
                   label="Status"
                   disabled={loading}
                 >
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="in progress">In Progress</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
+                  <MenuItem value="draft">Draft</MenuItem>
+                  <MenuItem value="pending_approval">Pending Approval</MenuItem>
+                  <MenuItem value="approved">Approved</MenuItem>
+                  <MenuItem value="rejected">Rejected</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12}>
-              <Typography gutterBottom>Progress</Typography>
-              <Slider
-                value={formData.progress}
-                onChange={handleProgressChange}
+              <TextField
+                fullWidth
+                label="Observations"
+                name="observations"
+                value={formData.observations}
+                onChange={handleChange}
+                multiline
+                rows={4}
+                required
                 disabled={loading}
-                valueLabelDisplay="auto"
-                step={10}
-                marks
-                min={0}
-                max={100}
               />
             </Grid>
 
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Notes"
-                name="notes"
-                value={formData.notes}
+                label="Recommendations"
+                name="recommendations"
+                value={formData.recommendations}
                 onChange={handleChange}
                 multiline
                 rows={3}
-                disabled={loading}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Goals"
-                name="goals"
-                value={formData.goals}
-                onChange={handleChange}
-                multiline
-                rows={2}
-                disabled={loading}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Challenges"
-                name="challenges"
-                value={formData.challenges}
-                onChange={handleChange}
-                multiline
-                rows={2}
-                disabled={loading}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Next Steps"
-                name="nextSteps"
-                value={formData.nextSteps}
-                onChange={handleChange}
-                multiline
-                rows={2}
                 disabled={loading}
               />
             </Grid>
@@ -256,7 +288,7 @@ const ProgressReportForm = () => {
                   color="primary"
                   disabled={loading}
                 >
-                  {loading ? <CircularProgress size={24} /> : isEditing ? 'Update' : 'Save'}
+                  {loading ? <CircularProgress size={24} /> : 'Save Report'}
                 </Button>
               </Box>
             </Grid>

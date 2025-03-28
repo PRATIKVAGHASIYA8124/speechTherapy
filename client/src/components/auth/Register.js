@@ -13,7 +13,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText
+  FormHelperText,
+  Grid
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFormik } from 'formik';
@@ -59,12 +60,19 @@ const validationSchema = Yup.object({
     .oneOf([Yup.ref('password'), null], 'Passwords must match'),
   role: Yup.string()
     .required('Role is required')
-    .oneOf(['therapist', 'supervisor'], 'Invalid role selection')
+    .oneOf(['therapist', 'supervisor'], 'Invalid role selection'),
+  specialization: Yup.string()
+    .required('Specialization is required')
+    .min(2, 'Specialization must be at least 2 characters'),
+  experience: Yup.number()
+    .required('Experience is required')
+    .min(0, 'Experience cannot be negative')
+    .max(50, 'Experience cannot exceed 50 years')
 });
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -75,14 +83,23 @@ const Register = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      role: ''
+      role: '',
+      specialization: '',
+      experience: ''
     },
     validationSchema,
     onSubmit: async (values) => {
       try {
         setLoading(true);
         setError(null);
-        await register(values);
+        await register(
+          values.name,
+          values.email,
+          values.password,
+          values.role,
+          values.specialization,
+          parseInt(values.experience)
+        );
         setSuccess(true);
       } catch (err) {
         console.error('Registration error:', err);
@@ -233,6 +250,33 @@ const Register = () => {
                   <FormHelperText>{formik.errors.role}</FormHelperText>
                 )}
               </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Specialization"
+                name="specialization"
+                value={formik.values.specialization}
+                onChange={handleChange}
+                error={formik.touched.specialization && Boolean(formik.errors.specialization)}
+                helperText={formik.touched.specialization && formik.errors.specialization}
+                disabled={loading}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Years of Experience"
+                name="experience"
+                type="number"
+                value={formik.values.experience}
+                onChange={handleChange}
+                error={formik.touched.experience && Boolean(formik.errors.experience)}
+                helperText={formik.touched.experience && formik.errors.experience}
+                disabled={loading}
+              />
             </Grid>
 
             <Grid item xs={12}>
