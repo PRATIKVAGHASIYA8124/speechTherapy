@@ -29,7 +29,7 @@ const therapistMenuItems = [
   { text: 'My Patients', icon: <PeopleIcon />, path: '/patients' },
   { text: 'My Therapy Plans', icon: <AssignmentIcon />, path: '/therapy-plans' },
   { text: 'My Progress Reports', icon: <AssessmentIcon />, path: '/progress-reports' },
-  { text: 'Clinical Ratings', icon: <StarIcon />, path: '/clinical-ratings' },
+  { text: 'Clinical Ratings', icon: <StarIcon />, path: '/ratings' },
 ];
 
 const supervisorMenuItems = [
@@ -38,7 +38,7 @@ const supervisorMenuItems = [
   { text: 'Pending Approvals', icon: <PendingIcon />, path: '/pending-approvals' },
   { text: 'All Therapy Plans', icon: <AssignmentIcon />, path: '/therapy-plans' },
   { text: 'All Progress Reports', icon: <AssessmentIcon />, path: '/progress-reports' },
-  { text: 'Clinical Ratings', icon: <StarIcon />, path: '/clinical-ratings' },
+  { text: 'Clinical Ratings', icon: <StarIcon />, path: '/ratings' },
   { text: 'Completed Reports', icon: <CheckCircleIcon />, path: '/completed-reports' },
 ];
 

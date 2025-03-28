@@ -25,7 +25,7 @@ router.get('/stats', auth, async (req, res) => {
         Patient.countDocuments(),
         TherapyPlan.countDocuments({ status: 'active' }),
         TherapyPlan.countDocuments({ status: 'pending_approval' }),
-        ProgressReport.countDocuments({ status: 'completed' })
+        ProgressReport.countDocuments({ status: 'approved' })
       ]);
 
       stats = {
@@ -44,7 +44,7 @@ router.get('/stats', auth, async (req, res) => {
       ] = await Promise.all([
         Patient.countDocuments({ therapist: userId }),
         TherapyPlan.countDocuments({ therapist: userId, status: 'active' }),
-        ProgressReport.countDocuments({ therapist: userId, status: 'pending' }),
+        ProgressReport.countDocuments({ therapist: userId, status: 'pending_approval' }),
         ClinicalRating.countDocuments({ therapist: userId })
       ]);
 
@@ -56,10 +56,14 @@ router.get('/stats', auth, async (req, res) => {
       };
     }
 
+    console.log('Dashboard stats:', stats);
     res.json(stats);
   } catch (error) {
     console.error('Dashboard stats error:', error);
-    res.status(500).json({ message: 'Error fetching dashboard statistics' });
+    res.status(500).json({ 
+      message: 'Error fetching dashboard statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

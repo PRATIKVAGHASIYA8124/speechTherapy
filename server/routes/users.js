@@ -20,13 +20,11 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get all supervisors (protected route)
+// Get all supervisors
 router.get('/supervisors', auth, async (req, res) => {
   try {
     const supervisors = await User.find({ role: 'supervisor' })
-      .select('-password')
-      .sort({ name: 1 });
-    
+      .select('name email role');
     res.json(supervisors);
   } catch (err) {
     console.error('Error fetching supervisors:', err);

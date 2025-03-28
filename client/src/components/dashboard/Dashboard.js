@@ -59,7 +59,7 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, api } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -75,25 +75,8 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:5000/api/dashboard/stats', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard statistics');
-        }
-
-        const data = await response.json();
-        setStats(data);
+        const response = await api.get('/dashboard/stats');
+        setStats(response.data);
       } catch (err) {
         console.error('Dashboard stats error:', err);
         setError('Failed to load dashboard statistics. Please check your connection and try again.');
@@ -103,7 +86,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardStats();
-  }, [user]);
+  }, [user, api]);
 
   if (!user) {
     return null;

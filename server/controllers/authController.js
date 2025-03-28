@@ -11,11 +11,30 @@ const generateToken = (userId) => {
 // Register new user
 exports.register = async (req, res) => {
   try {
+    console.log('Registration request received:', req.body);
+    
     const { name, email, password, role, specialization, experience } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password || !role || !specialization || experience === undefined) {
+      console.log('Missing required fields:', { name, email, role, specialization, experience });
+      return res.status(400).json({ 
+        message: 'All fields are required',
+        missingFields: {
+          name: !name,
+          email: !email,
+          password: !password,
+          role: !role,
+          specialization: !specialization,
+          experience: experience === undefined
+        }
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('User already exists:', email);
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -26,10 +45,12 @@ exports.register = async (req, res) => {
       password,
       role,
       specialization,
-      experience
+      experience: parseInt(experience)
     });
 
+    console.log('Attempting to save user:', { name, email, role, specialization, experience });
     await user.save();
+    console.log('User saved successfully');
 
     // Generate token
     const token = generateToken(user._id);
@@ -47,7 +68,12 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error registering user', error: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      message: 'Error registering user', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -84,7 +110,12 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error logging in', error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      message: 'Error logging in', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -97,7 +128,12 @@ exports.getProfile = async (req, res) => {
     }
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    console.error('Get profile error:', error);
+    res.status(500).json({ 
+      message: 'Error fetching profile', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -120,6 +156,11 @@ exports.updateProfile = async (req, res) => {
       user: req.user
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating profile', error: error.message });
+    console.error('Update profile error:', error);
+    res.status(500).json({ 
+      message: 'Error updating profile', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }; 

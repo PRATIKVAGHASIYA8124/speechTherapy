@@ -16,11 +16,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
-import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const PendingTherapyPlans = () => {
+  const { api, user } = useAuth();
   const [plans, setPlans] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,16 +31,50 @@ const PendingTherapyPlans = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
+    console.log('Current user:', user); // Log current user
+    if (!user) {
+      setError('Please log in to access this page');
+      setLoading(false);
+      return;
+    }
+    
+    if (user.role !== 'supervisor') {
+      setError('Only supervisors can access this page');
+      setLoading(false);
+      return;
+    }
+    
     fetchPendingPlans();
-  }, []);
+  }, [user]);
 
   const fetchPendingPlans = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/therapy-plans?status=pending_approval');
-      setPlans(response.data);
+      setLoading(true);
       setError('');
+      console.log('Fetching pending plans...');
+      const response = await api.get('/therapy-plans?status=pending_approval');
+      console.log('API Response:', response);
+      console.log('Fetched pending plans:', response.data);
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid response format from server');
+      }
+      
+      setPlans(response.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error fetching pending therapy plans');
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      if (err.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to view pending approvals.');
+      } else {
+        setError(err.response?.data?.message || 'Error fetching pending therapy plans. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -52,14 +88,18 @@ const PendingTherapyPlans = () => {
 
   const handleApprove = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/therapy-plans/${selectedPlan._id}/approve`, {
+      setLoading(true);
+      await api.put(`/therapy-plans/${selectedPlan._id}/approve`, {
         feedback: feedback
       });
       setPlans(plans.filter(p => p._id !== selectedPlan._id));
       setDialogOpen(false);
       setSelectedPlan(null);
     } catch (err) {
+      console.error('Error approving plan:', err);
       setError(err.response?.data?.message || 'Error approving therapy plan');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,16 +109,28 @@ const PendingTherapyPlans = () => {
       return;
     }
     try {
-      await axios.put(`http://localhost:5000/api/therapy-plans/${selectedPlan._id}/reject`, {
+      setLoading(true);
+      await api.put(`/therapy-plans/${selectedPlan._id}/reject`, {
         feedback: feedback
       });
       setPlans(plans.filter(p => p._id !== selectedPlan._id));
       setDialogOpen(false);
       setSelectedPlan(null);
     } catch (err) {
+      console.error('Error rejecting plan:', err);
       setError(err.response?.data?.message || 'Error rejecting therapy plan');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -96,20 +148,20 @@ const PendingTherapyPlans = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Title</TableCell>
               <TableCell>Patient</TableCell>
               <TableCell>Therapist</TableCell>
-              <TableCell>Submission Date</TableCell>
+              <TableCell>Start Date</TableCell>
+              <TableCell>End Date</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {plans.map((plan) => (
               <TableRow key={plan._id}>
-                <TableCell>{plan.title}</TableCell>
-                <TableCell>{plan.patient?.name}</TableCell>
-                <TableCell>{plan.therapist?.name}</TableCell>
-                <TableCell>{new Date(plan.updatedAt).toLocaleDateString()}</TableCell>
+                <TableCell>{plan.patient?.name || 'N/A'}</TableCell>
+                <TableCell>{plan.therapist?.name || 'N/A'}</TableCell>
+                <TableCell>{new Date(plan.startDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(plan.endDate).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Button
                     variant="contained"
@@ -121,6 +173,13 @@ const PendingTherapyPlans = () => {
                 </TableCell>
               </TableRow>
             ))}
+            {plans.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} align="center">
+                  No pending therapy plans
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -133,7 +192,6 @@ const PendingTherapyPlans = () => {
               <Typography variant="h6" gutterBottom>
                 Plan Details
               </Typography>
-              <Typography><strong>Title:</strong> {selectedPlan.title}</Typography>
               <Typography><strong>Patient:</strong> {selectedPlan.patient?.name}</Typography>
               <Typography><strong>Therapist:</strong> {selectedPlan.therapist?.name}</Typography>
               <Typography><strong>Start Date:</strong> {new Date(selectedPlan.startDate).toLocaleDateString()}</Typography>
@@ -181,10 +239,10 @@ const PendingTherapyPlans = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleReject} color="error">
+          <Button onClick={handleReject} color="error" disabled={loading}>
             Reject
           </Button>
-          <Button onClick={handleApprove} color="primary" variant="contained">
+          <Button onClick={handleApprove} color="primary" disabled={loading}>
             Approve
           </Button>
         </DialogActions>

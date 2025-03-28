@@ -7,35 +7,63 @@ const ProgressReport = require('../models/ProgressReport');
 router.get('/', auth, async (req, res) => {
   try {
     const { patient } = req.query;
-    const query = { therapist: req.user.id };
+    const query = {};
+    
+    // If user is a supervisor, they can see all reports
+    // If user is a therapist, they can only see their own reports
+    if (req.user.role !== 'supervisor') {
+      query.therapist = req.user.id;
+    }
+    
     if (patient) {
       query.patient = patient;
     }
+
+    console.log('Fetching progress reports with query:', query);
+    
     const progressReports = await ProgressReport.find(query)
       .populate('patient', 'name')
-      .populate('therapyPlan', 'goals activities');
+      .populate('therapyPlan', 'goals activities')
+      .populate('therapist', 'name')
+      .sort({ createdAt: -1 }); // Sort by newest first
+      
+    console.log('Found progress reports:', progressReports);
+    
     res.json(progressReports);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching progress reports:', err);
+    res.status(500).json({ 
+      message: 'Error fetching progress reports',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
 // Get single progress report
 router.get('/:id', auth, async (req, res) => {
   try {
-    const progressReport = await ProgressReport.findOne({
-      _id: req.params.id,
-      therapist: req.user.id
-    })
+    const query = { _id: req.params.id };
+    
+    // If user is not a supervisor, they can only see their own reports
+    if (req.user.role !== 'supervisor') {
+      query.therapist = req.user.id;
+    }
+
+    const progressReport = await ProgressReport.findOne(query)
       .populate('patient', 'name')
-      .populate('therapyPlan', 'goals activities');
+      .populate('therapyPlan', 'goals activities')
+      .populate('therapist', 'name');
     
     if (!progressReport) {
       return res.status(404).json({ message: 'Progress report not found' });
     }
     res.json(progressReport);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching progress report:', err);
+    res.status(500).json({ 
+      message: 'Error fetching progress report',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

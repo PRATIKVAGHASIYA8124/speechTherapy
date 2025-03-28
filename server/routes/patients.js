@@ -6,9 +6,17 @@ const Patient = require('../models/Patient');
 // Get all patients
 router.get('/', auth, async (req, res) => {
   try {
-    const patients = await Patient.find({ therapist: req.user.id });
+    let query = {};
+    // If user is a therapist, only show their patients
+    if (req.user.role === 'therapist') {
+      query.therapist = req.user.id;
+    }
+    const patients = await Patient.find(query)
+      .populate('therapist', 'name')
+      .sort({ createdAt: -1 });
     res.json(patients);
   } catch (err) {
+    console.error('Error fetching patients:', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -16,10 +24,13 @@ router.get('/', auth, async (req, res) => {
 // Get single patient
 router.get('/:id', auth, async (req, res) => {
   try {
-    const patient = await Patient.findOne({
-      _id: req.params.id,
-      therapist: req.user.id
-    });
+    let query = { _id: req.params.id };
+    // If user is a therapist, only allow access to their patients
+    if (req.user.role === 'therapist') {
+      query.therapist = req.user.id;
+    }
+    
+    const patient = await Patient.findOne(query).populate('therapist', 'name');
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
@@ -47,10 +58,13 @@ router.post('/', auth, async (req, res) => {
 // Update patient
 router.put('/:id', auth, async (req, res) => {
   try {
-    const patient = await Patient.findOne({
-      _id: req.params.id,
-      therapist: req.user.id
-    });
+    let query = { _id: req.params.id };
+    // If user is a therapist, only allow access to their patients
+    if (req.user.role === 'therapist') {
+      query.therapist = req.user.id;
+    }
+
+    const patient = await Patient.findOne(query);
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
@@ -66,17 +80,19 @@ router.put('/:id', auth, async (req, res) => {
 // Delete patient
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const patient = await Patient.findOne({
-      _id: req.params.id,
-      therapist: req.user.id
-    });
+    let query = { _id: req.params.id };
+    // If user is a therapist, only allow access to their patients
+    if (req.user.role === 'therapist') {
+      query.therapist = req.user.id;
+    }
+
+    const patient = await Patient.findOneAndDelete(query);
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
-
-    await patient.remove();
-    res.json({ message: 'Patient deleted' });
+    res.json({ message: 'Patient deleted successfully' });
   } catch (err) {
+    console.error('Error deleting patient:', err);
     res.status(500).json({ message: err.message });
   }
 });

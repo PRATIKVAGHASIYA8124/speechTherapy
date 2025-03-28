@@ -22,7 +22,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 
 const CompletedReports = () => {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,18 +32,42 @@ const CompletedReports = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get('/reports/completed');
+        console.log('Fetching completed reports...');
+        const response = await api.get('/progress-reports?status=approved');
+        console.log('Fetched reports:', response.data);
+        
+        if (!response.data || !Array.isArray(response.data)) {
+          throw new Error('Invalid response format from server');
+        }
+        
         setReports(response.data);
       } catch (err) {
-        console.error('Failed to fetch completed reports:', err);
-        setError('Failed to load completed reports');
+        console.error('Error details:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+        
+        if (err.response?.status === 401) {
+          setError('Your session has expired. Please log in again.');
+        } else if (err.response?.status === 403) {
+          setError('You do not have permission to view completed reports.');
+        } else {
+          setError(err.response?.data?.message || 'Failed to load completed reports. Please try again.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
+    if (!user) {
+      setError('Please log in to view completed reports');
+      setLoading(false);
+      return;
+    }
+
     fetchCompletedReports();
-  }, [api]);
+  }, [api, user]);
 
   const handleDownload = async (id) => {
     try {
@@ -95,58 +119,37 @@ const CompletedReports = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Report Type</TableCell>
                 <TableCell>Patient</TableCell>
                 <TableCell>Therapist</TableCell>
-                <TableCell>Completion Date</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>Session Date</TableCell>
+                <TableCell>Duration</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {reports.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    No completed reports
+              {reports.map((report) => (
+                <TableRow key={report._id}>
+                  <TableCell>{report.patient?.name || 'N/A'}</TableCell>
+                  <TableCell>{report.therapist?.name || 'N/A'}</TableCell>
+                  <TableCell>{new Date(report.sessionDetails.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{report.sessionDetails.duration} minutes</TableCell>
+                  <TableCell>
+                    <Button
+                      size="small"
+                      startIcon={<ViewIcon />}
+                      onClick={() => {/* Handle view */}}
+                    >
+                      View
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ) : (
-                reports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>{report.type}</TableCell>
-                    <TableCell>{report.patientName}</TableCell>
-                    <TableCell>{report.therapistName}</TableCell>
-                    <TableCell>
-                      {new Date(report.completionDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label="Completed"
-                        color="success"
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          startIcon={<ViewIcon />}
-                          onClick={() => {/* Handle view */}}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          size="small"
-                          color="primary"
-                          startIcon={<DownloadIcon />}
-                          onClick={() => handleDownload(report.id)}
-                        >
-                          Download
-                        </Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
+              ))}
+              {reports.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    No completed reports found
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
