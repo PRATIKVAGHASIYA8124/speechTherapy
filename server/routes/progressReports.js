@@ -33,10 +33,16 @@ router.get('/', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    // Try to find reports
+    // Try to find reports with proper population
     const progressReports = await ProgressReport.find(query)
-      .populate('patient', 'name')
-      .populate('therapist', 'name')
+      .populate({
+        path: 'patient',
+        select: 'name age gender contactNumber email status'
+      })
+      .populate({
+        path: 'therapist',
+        select: 'name email role'
+      })
       .sort({ createdAt: -1 }); // Sort by newest first
     
     console.log('Found reports:', progressReports.length);
@@ -82,8 +88,14 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const progressReport = await ProgressReport.findOne(query)
-      .populate('patient', 'name')
-      .populate('therapist', 'name');
+      .populate({
+        path: 'patient',
+        select: 'name age gender contactNumber email status'
+      })
+      .populate({
+        path: 'therapist',
+        select: 'name email role'
+      });
     
     if (!progressReport) {
       return res.status(404).json({ message: 'Progress report not found' });
