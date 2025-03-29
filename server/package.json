@@ -12,7 +12,9 @@
     "test:coverage": "jest --coverage",
     "backup": "node scripts/backup.js",
     "recover": "node scripts/recover.js",
-    "list-backups": "node scripts/recover.js"
+    "list-backups": "node scripts/recover.js",
+    "vercel-build": "echo 'Build step completed'",
+    "build": "echo 'Build step completed'"
   },
   "keywords": [
     "speech-therapy",
