@@ -7,12 +7,14 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// CORS configuration - more permissive for development
+// CORS configuration
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://speech-therapy-nine.vercel.app', 'https://speech-therapy-nine.vercel.app/api']
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware
