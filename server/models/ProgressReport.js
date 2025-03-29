@@ -3,17 +3,12 @@ const mongoose = require('mongoose');
 const progressReportSchema = new mongoose.Schema({
   patient: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Patient',
+    ref: 'User',
     required: true
   },
   therapist: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
-  },
-  therapyPlan: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'TherapyPlan',
     required: true
   },
   sessionDetails: {
@@ -23,40 +18,36 @@ const progressReportSchema = new mongoose.Schema({
     },
     duration: {
       type: Number,
-      required: true
+      required: true,
+      min: 0
     },
-    activitiesPerformed: [{
-      activity: {
-        type: String,
-        required: true
-      },
-      performance: {
-        type: String,
-        enum: ['excellent', 'good', 'fair', 'poor'],
-        required: true
-      },
-      notes: String
+    type: {
+      type: String,
+      required: true,
+      enum: ['individual', 'group', 'family']
+    }
+  },
+  progress: {
+    goals: [{
+      type: String,
+      required: true
+    }],
+    achievements: [{
+      type: String,
+      required: true
+    }],
+    challenges: [{
+      type: String,
+      required: true
     }]
   },
-  goalProgress: [{
-    goal: {
-      type: String,
-      required: true
-    },
-    progress: {
-      type: String,
-      enum: ['excellent', 'good', 'fair', 'poor'],
-      required: true
-    },
-    notes: String
-  }],
-  observations: {
+  nextSteps: [{
     type: String,
     required: true
-  },
-  recommendations: String,
+  }],
   status: {
     type: String,
+    required: true,
     enum: ['draft', 'pending_approval', 'approved', 'rejected'],
     default: 'draft'
   },

@@ -9,6 +9,12 @@ router.get('/', auth, async (req, res) => {
     const { patient } = req.query;
     const query = {};
     
+    console.log('Fetching progress reports for user:', {
+      userId: req.user.id,
+      role: req.user.role,
+      user: req.user
+    });
+    
     // If user is a supervisor, they can see all reports
     // If user is a therapist, they can only see their own reports
     if (req.user.role !== 'supervisor') {
@@ -19,19 +25,45 @@ router.get('/', auth, async (req, res) => {
       query.patient = patient;
     }
 
-    console.log('Fetching progress reports with query:', query);
-    
+    console.log('Query:', query);
+
+    // First check if the user exists
+    if (!req.user || !req.user.id) {
+      console.error('User not found or invalid:', req.user);
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // Try to find reports
     const progressReports = await ProgressReport.find(query)
       .populate('patient', 'name')
-      .populate('therapyPlan', 'goals activities')
       .populate('therapist', 'name')
       .sort({ createdAt: -1 }); // Sort by newest first
-      
-    console.log('Found progress reports:', progressReports);
     
+    console.log('Found reports:', progressReports.length);
     res.json(progressReports);
   } catch (err) {
-    console.error('Error fetching progress reports:', err);
+    console.error('Error fetching progress reports:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+      code: err.code
+    });
+    
+    // Check for specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({ 
+        message: 'Invalid ID format',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+    
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+
     res.status(500).json({ 
       message: 'Error fetching progress reports',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -51,7 +83,6 @@ router.get('/:id', auth, async (req, res) => {
 
     const progressReport = await ProgressReport.findOne(query)
       .populate('patient', 'name')
-      .populate('therapyPlan', 'goals activities')
       .populate('therapist', 'name');
     
     if (!progressReport) {
@@ -69,16 +100,20 @@ router.get('/:id', auth, async (req, res) => {
 
 // Create progress report
 router.post('/', auth, async (req, res) => {
-  const progressReport = new ProgressReport({
-    ...req.body,
-    therapist: req.user.id
-  });
-
   try {
+    const progressReport = new ProgressReport({
+      ...req.body,
+      therapist: req.user.id
+    });
+
     const newProgressReport = await progressReport.save();
     res.status(201).json(newProgressReport);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Error creating progress report:', err);
+    res.status(400).json({ 
+      message: err.message,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
@@ -98,7 +133,11 @@ router.put('/:id', auth, async (req, res) => {
     const updatedProgressReport = await progressReport.save();
     res.json(updatedProgressReport);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Error updating progress report:', err);
+    res.status(400).json({ 
+      message: err.message,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
@@ -114,10 +153,14 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Progress report not found' });
     }
 
-    await progressReport.remove();
+    await progressReport.deleteOne();
     res.json({ message: 'Progress report deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error deleting progress report:', err);
+    res.status(500).json({ 
+      message: err.message,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

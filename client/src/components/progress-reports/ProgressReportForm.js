@@ -27,11 +27,14 @@ const ProgressReportForm = () => {
     sessionDetails: {
       date: new Date().toISOString().split('T')[0],
       duration: '',
-      activitiesPerformed: []
+      type: 'individual'
     },
-    goalProgress: [],
-    observations: '',
-    recommendations: '',
+    progress: {
+      goals: [''],
+      achievements: [''],
+      challenges: ['']
+    },
+    nextSteps: [''],
     status: 'draft'
   });
   const [patients, setPatients] = useState([]);
@@ -86,14 +89,16 @@ const ProgressReportForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
+      const parts = name.split('.');
+      setFormData(prev => {
+        let newData = { ...prev };
+        let current = newData;
+        for (let i = 0; i < parts.length - 1; i++) {
+          current = current[parts[i]];
         }
-      }));
+        current[parts[parts.length - 1]] = value;
+        return newData;
+      });
     } else {
       setFormData(prev => ({
         ...prev,
@@ -114,9 +119,23 @@ const ProgressReportForm = () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Format the data before submission
       const reportData = {
         ...formData,
-        therapist: user._id
+        therapist: user._id,
+        sessionDetails: {
+          ...formData.sessionDetails,
+          date: new Date(formData.sessionDetails.date),
+          duration: Number(formData.sessionDetails.duration),
+          type: formData.sessionDetails.type
+        },
+        progress: {
+          goals: formData.progress.goals.filter(goal => goal.trim() !== ''),
+          achievements: formData.progress.achievements.filter(achievement => achievement.trim() !== ''),
+          challenges: formData.progress.challenges.filter(challenge => challenge.trim() !== '')
+        },
+        nextSteps: formData.nextSteps.filter(step => step.trim() !== '')
       };
       
       if (isEditing) {
@@ -228,6 +247,23 @@ const ProgressReportForm = () => {
               />
             </Grid>
 
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Session Type</InputLabel>
+                <Select
+                  name="sessionDetails.type"
+                  value={formData.sessionDetails.type}
+                  onChange={handleChange}
+                  label="Session Type"
+                  disabled={loading}
+                >
+                  <MenuItem value="individual">Individual</MenuItem>
+                  <MenuItem value="group">Group</MenuItem>
+                  <MenuItem value="family">Family</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>Status</InputLabel>
@@ -247,30 +283,128 @@ const ProgressReportForm = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Observations"
-                name="observations"
-                value={formData.observations}
-                onChange={handleChange}
-                multiline
-                rows={4}
-                required
-                disabled={loading}
-              />
+              <Typography variant="h6" gutterBottom>Goals</Typography>
+              {formData.progress.goals.map((goal, index) => (
+                <Grid item xs={12} key={index} sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    label={`Goal ${index + 1}`}
+                    name={`progress.goals.${index}`}
+                    value={goal}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </Grid>
+              ))}
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    progress: {
+                      ...prev.progress,
+                      goals: [...prev.progress.goals, '']
+                    }
+                  }));
+                }}
+                sx={{ mt: 1 }}
+              >
+                Add Goal
+              </Button>
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Recommendations"
-                name="recommendations"
-                value={formData.recommendations}
-                onChange={handleChange}
-                multiline
-                rows={3}
-                disabled={loading}
-              />
+              <Typography variant="h6" gutterBottom>Achievements</Typography>
+              {formData.progress.achievements.map((achievement, index) => (
+                <Grid item xs={12} key={index} sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    label={`Achievement ${index + 1}`}
+                    name={`progress.achievements.${index}`}
+                    value={achievement}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </Grid>
+              ))}
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    progress: {
+                      ...prev.progress,
+                      achievements: [...prev.progress.achievements, '']
+                    }
+                  }));
+                }}
+                sx={{ mt: 1 }}
+              >
+                Add Achievement
+              </Button>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Challenges</Typography>
+              {formData.progress.challenges.map((challenge, index) => (
+                <Grid item xs={12} key={index} sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    label={`Challenge ${index + 1}`}
+                    name={`progress.challenges.${index}`}
+                    value={challenge}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </Grid>
+              ))}
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    progress: {
+                      ...prev.progress,
+                      challenges: [...prev.progress.challenges, '']
+                    }
+                  }));
+                }}
+                sx={{ mt: 1 }}
+              >
+                Add Challenge
+              </Button>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Next Steps</Typography>
+              {formData.nextSteps.map((step, index) => (
+                <Grid item xs={12} key={index} sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    label={`Next Step ${index + 1}`}
+                    name={`nextSteps.${index}`}
+                    value={step}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </Grid>
+              ))}
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    nextSteps: [...prev.nextSteps, '']
+                  }));
+                }}
+                sx={{ mt: 1 }}
+              >
+                Add Next Step
+              </Button>
             </Grid>
 
             <Grid item xs={12}>

@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: {
-      values: ['therapist', 'supervisor'],
+      values: ['therapist', 'supervisor', 'patient'],
       message: '{VALUE} is not a valid role'
     },
     required: [true, 'Role is required']
@@ -63,13 +63,10 @@ userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    console.log('Hashing password for user:', this.email);
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    console.log('Password hashed successfully');
     next();
   } catch (error) {
-    console.error('Error hashing password:', error);
     next(error);
   }
 });
@@ -79,7 +76,6 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
-    console.error('Error comparing passwords:', error);
     throw error;
   }
 };
@@ -87,11 +83,9 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 // Add validation error handling
 userSchema.post('save', function(error, doc, next) {
   if (error.name === 'ValidationError') {
-    console.error('Validation error:', error);
     next(new Error(Object.values(error.errors).map(err => err.message).join(', ')));
   } else if (error.code === 11000) {
-    console.error('Duplicate key error:', error);
-    next(new Error('Email already exists'));
+    next(new Error('User already exists'));
   } else {
     next(error);
   }

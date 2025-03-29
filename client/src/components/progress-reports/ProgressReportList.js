@@ -27,41 +27,88 @@ const ProgressReportList = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!user) {
-      setError('Please log in to view progress reports');
-      setLoading(false);
-      return;
-    }
-    fetchReports();
+    const checkAuthAndFetch = async () => {
+      if (!user) {
+        setError('Please log in to view progress reports');
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has a valid role
+      if (!['therapist', 'supervisor'].includes(user.role)) {
+        setError('You do not have permission to view progress reports');
+        setLoading(false);
+        return;
+      }
+
+      await fetchReports();
+    };
+
+    checkAuthAndFetch();
   }, [user]);
 
   const fetchReports = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching progress reports...');
-      const response = await api.get('/progress-reports');
-      console.log('Fetched reports:', response.data);
+      console.log('Starting to fetch progress reports...');
+      console.log('User:', user);
+      
+      // Add authorization header
+      const response = await api.get('/progress-reports', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      console.log('API Response:', response);
       
       if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response format:', response.data);
         throw new Error('Invalid response format from server');
       }
       
-      setReports(response.data);
+      // Filter out any reports with missing required data
+      const validReports = response.data.filter(report => {
+        const isValid = report && 
+          report.patient && 
+          report.therapist && 
+          report.sessionDetails;
+        if (!isValid) {
+          console.log('Invalid report found:', report);
+        }
+        return isValid;
+      });
+      
+      console.log('Valid reports:', validReports);
+      setReports(validReports);
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
         response: err.response?.data,
-        status: err.response?.status
+        status: err.response?.status,
+        stack: err.stack
       });
       
+      let errorMessage = 'Failed to fetch progress reports. ';
+      
       if (err.response?.status === 401) {
-        setError('Your session has expired. Please log in again.');
+        errorMessage = 'Your session has expired. Please log in again.';
+        // Redirect to login
+        window.location.href = '/login';
       } else if (err.response?.status === 403) {
-        setError('You do not have permission to view progress reports.');
-      } else {
-        setError(err.response?.data?.message || 'Failed to fetch progress reports. Please try again.');
+        errorMessage = 'You do not have permission to view progress reports.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'No progress reports found.';
+      } else if (err.response?.status === 500) {
+        errorMessage = `Server error: ${err.response?.data?.message || err.message}`;
+      } else if (err.response?.data?.error) {
+        errorMessage = `Error: ${err.response.data.error}`;
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -128,13 +175,21 @@ const ProgressReportList = () => {
           <TableBody>
             {reports.map((report) => (
               <TableRow key={report._id}>
-                <TableCell>{report.patient?.name || 'N/A'}</TableCell>
+                <TableCell>{report.patient?.name || 'Unknown Patient'}</TableCell>
                 {user?.role === 'supervisor' && (
-                  <TableCell>{report.therapist?.name || 'N/A'}</TableCell>
+                  <TableCell>{report.therapist?.name || 'Unknown Therapist'}</TableCell>
                 )}
-                <TableCell>{new Date(report.sessionDetails.date).toLocaleDateString()}</TableCell>
-                <TableCell>{report.sessionDetails.duration} minutes</TableCell>
-                <TableCell>{report.status}</TableCell>
+                <TableCell>
+                  {report.sessionDetails?.date 
+                    ? new Date(report.sessionDetails.date).toLocaleDateString()
+                    : 'N/A'}
+                </TableCell>
+                <TableCell>
+                  {report.sessionDetails?.duration 
+                    ? `${report.sessionDetails.duration} minutes`
+                    : 'N/A'}
+                </TableCell>
+                <TableCell>{report.status || 'N/A'}</TableCell>
                 <TableCell>
                   <IconButton
                     color="primary"

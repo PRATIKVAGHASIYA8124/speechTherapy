@@ -7,7 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "start:https": "node start-https.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --detectOpenHandles --verbose",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "backup": "node scripts/backup.js",
     "recover": "node scripts/recover.js",
     "list-backups": "node scripts/recover.js"
@@ -34,6 +36,8 @@
     "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
     "nodemon": "^2.0.22"
   }
 }
