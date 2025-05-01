@@ -20,7 +20,9 @@ const Layout = ({ children }) => {
         sx={{ 
           zIndex: (theme) => theme.zIndex.drawer + 1,
           width: `calc(100% - ${drawerWidth}px)`,
-          ml: `${drawerWidth}px`
+          ml: `${drawerWidth}px`,
+          background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+          boxShadow: '0 3px 5px 2px rgba(25, 118, 210, .3)'
         }}
       >
         <Toolbar>
@@ -48,9 +50,20 @@ const Layout = ({ children }) => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
           mt: '64px', // Height of AppBar
-          backgroundColor: (theme) => theme.palette.grey[100],
           minHeight: 'calc(100vh - 64px)',
-          overflow: 'auto'
+          overflow: 'auto',
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.9) 100%)',
+            zIndex: -1
+          }
         }}
       >
         {children}
