@@ -54,13 +54,7 @@ const ProgressReportList = () => {
       console.log('Starting to fetch progress reports...');
       console.log('User:', user);
       
-      // Add authorization header
-      const response = await api.get('/progress-reports', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+      const response = await api.get('/progress-reports');
       console.log('API Response:', response);
       
       if (!response.data || !Array.isArray(response.data)) {
@@ -68,20 +62,8 @@ const ProgressReportList = () => {
         throw new Error('Invalid response format from server');
       }
       
-      // Filter out any reports with missing required data
-      const validReports = response.data.filter(report => {
-        const isValid = report && 
-          report.patient && 
-          report.therapist && 
-          report.sessionDetails;
-        if (!isValid) {
-          console.log('Invalid report found:', report);
-        }
-        return isValid;
-      });
-      
-      console.log('Valid reports:', validReports);
-      setReports(validReports);
+      // Set reports directly without filtering
+      setReports(response.data);
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
@@ -194,6 +176,7 @@ const ProgressReportList = () => {
                   <IconButton
                     color="primary"
                     onClick={() => navigate(`/progress-reports/${report._id}`)}
+                    title="View Details"
                   >
                     <EditIcon />
                   </IconButton>
@@ -201,6 +184,7 @@ const ProgressReportList = () => {
                     <IconButton
                       color="error"
                       onClick={() => handleDelete(report._id)}
+                      title="Delete Report"
                     >
                       <DeleteIcon />
                     </IconButton>

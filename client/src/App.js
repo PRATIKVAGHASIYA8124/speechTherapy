@@ -18,10 +18,12 @@ import NotFound from './components/auth/NotFound';
 import Dashboard from './components/dashboard/Dashboard';
 import PatientList from './components/patients/PatientList';
 import PatientForm from './components/patients/PatientForm';
+import PatientDetails from './components/patients/PatientDetails';
 import TherapyPlanList from './components/therapy-plans/TherapyPlanList';
 import TherapyPlanForm from './components/therapy-plans/TherapyPlanForm';
 import ProgressReportList from './components/progress-reports/ProgressReportList';
 import ProgressReportForm from './components/progress-reports/ProgressReportForm';
+import ProgressReportDetails from './components/progress-reports/ProgressReportDetails';
 import PendingApprovals from './components/approvals/PendingApprovals';
 import CompletedReports from './components/reports/CompletedReports';
 import ClinicalRatingList from './components/ratings/ClinicalRatingList';
@@ -117,6 +119,15 @@ const AppRoutes = () => {
         }
       />
 
+      <Route
+        path="/patients/:id"
+        element={
+          <ProtectedRoute>
+            <PatientDetails />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Therapy Plan Routes */}
       <Route
         path="/therapy-plans"
@@ -169,6 +180,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['therapist']}>
             <ProgressReportForm />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/progress-reports/:id"
+        element={
+          <ProtectedRoute>
+            <ProgressReportDetails />
           </ProtectedRoute>
         }
       />

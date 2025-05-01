@@ -74,16 +74,12 @@ router.put('/:id', auth, async (req, res) => {
 // Delete clinical rating
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const rating = await ClinicalRating.findOne({
-      _id: req.params.id,
-      therapist: req.user.id
-    });
+    const rating = await ClinicalRating.findByIdAndDelete(req.params.id);
     
     if (!rating) {
       return res.status(404).json({ message: 'Clinical rating not found' });
     }
 
-    await rating.remove();
     res.json({ message: 'Clinical rating deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

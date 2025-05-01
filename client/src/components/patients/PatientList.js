@@ -59,6 +59,18 @@ const PatientList = () => {
     navigate(`/patients/${id}`);
   };
 
+  const handleRemove = async (id) => {
+    if (window.confirm('Are you sure you want to remove this patient?')) {
+      try {
+        await api.delete(`/patients/${id}`);
+        fetchPatients(); // Refresh the list
+      } catch (err) {
+        console.error('Error removing patient:', err);
+        setError('Failed to remove patient. Please try again later.');
+      }
+    }
+  };
+
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.therapist?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -120,10 +132,11 @@ const PatientList = () => {
               <TableCell>Name</TableCell>
               <TableCell>Age</TableCell>
               <TableCell>Gender</TableCell>
-              <TableCell>Contact</TableCell>
+              <TableCell>Contact Number</TableCell>
+              <TableCell>Email</TableCell>
               {user.role === 'supervisor' && <TableCell>Therapist</TableCell>}
               <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              {user.role === 'therapist' && <TableCell>Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -139,7 +152,8 @@ const PatientList = () => {
                   <TableCell>{patient.name}</TableCell>
                   <TableCell>{patient.age}</TableCell>
                   <TableCell>{patient.gender}</TableCell>
-                  <TableCell>{patient.contact}</TableCell>
+                  <TableCell>{patient.contactNumber}</TableCell>
+                  <TableCell>{patient.email || 'N/A'}</TableCell>
                   {user.role === 'supervisor' && (
                     <TableCell>{patient.therapist?.name || 'Unassigned'}</TableCell>
                   )}
@@ -150,16 +164,9 @@ const PatientList = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>
-                    <Box display="flex" gap={1}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleView(patient._id)}
-                      >
-                        View
-                      </Button>
-                      {user.role === 'therapist' && (
+                  {user.role === 'therapist' && (
+                    <TableCell>
+                      <Box display="flex" gap={1}>
                         <Button
                           variant="outlined"
                           size="small"
@@ -167,9 +174,17 @@ const PatientList = () => {
                         >
                           Edit
                         </Button>
-                      )}
-                    </Box>
-                  </TableCell>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={() => handleRemove(patient._id)}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

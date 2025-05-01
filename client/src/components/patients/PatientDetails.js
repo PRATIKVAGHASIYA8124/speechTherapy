@@ -20,7 +20,6 @@ import {
   Add as AddIcon,
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -38,7 +37,7 @@ const TabPanel = ({ children, value, index, ...other }) => (
 const PatientDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, api } = useAuth();
   const [patient, setPatient] = useState(null);
   const [therapyPlans, setTherapyPlans] = useState([]);
   const [progressReports, setProgressReports] = useState([]);
@@ -48,14 +47,14 @@ const PatientDetails = () => {
 
   useEffect(() => {
     fetchPatientData();
-  }, [id]);
+  }, [id, api]);
 
   const fetchPatientData = async () => {
     try {
       const [patientResponse, therapyPlansResponse, progressReportsResponse] = await Promise.all([
-        axios.get(`http://localhost:5000/api/patients/${id}`),
-        axios.get(`http://localhost:5000/api/therapy-plans?patient=${id}`),
-        axios.get(`http://localhost:5000/api/progress-reports?patient=${id}`)
+        api.get(`/patients/${id}`),
+        api.get(`/therapy-plans?patient=${id}`),
+        api.get(`/progress-reports?patient=${id}`)
       ]);
 
       setPatient(patientResponse.data);

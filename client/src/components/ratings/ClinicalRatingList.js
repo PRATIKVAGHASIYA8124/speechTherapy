@@ -17,21 +17,21 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon
-} from '@mui/icons-material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ClinicalRatingList = () => {
   const navigate = useNavigate();
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [ratings, setRatings] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Hide component for supervisors
+  if (user.role === 'supervisor') {
+    return null;
+  }
 
   useEffect(() => {
     fetchRatings();
@@ -56,7 +56,7 @@ const ClinicalRatingList = () => {
     if (window.confirm('Are you sure you want to delete this clinical rating?')) {
       try {
         await api.delete(`/ratings/${id}`);
-        setRatings(ratings.filter(rating => rating._id !== id));
+        setRatings(prevRatings => prevRatings.filter(rating => rating._id !== id));
       } catch (err) {
         console.error('Error deleting clinical rating:', err);
         setError(err.response?.data?.message || 'Error deleting clinical rating');
@@ -70,7 +70,7 @@ const ClinicalRatingList = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
       </Box>
     );
@@ -85,10 +85,9 @@ const ClinicalRatingList = () => {
         <Button
           variant="contained"
           color="primary"
-          startIcon={<AddIcon />}
           onClick={() => navigate('/ratings/new')}
         >
-          Add Clinical Rating
+          Add New Rating
         </Button>
       </Box>
 
@@ -113,10 +112,9 @@ const ClinicalRatingList = () => {
           <TableHead>
             <TableRow>
               <TableCell>Patient</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Score</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>Overall Rating</TableCell>
+              <TableCell>Evaluation Period</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -129,28 +127,17 @@ const ClinicalRatingList = () => {
             ) : (
               filteredRatings.map((rating) => (
                 <TableRow key={rating._id}>
-                  <TableCell>{rating.patient?.name || 'Unknown Patient'}</TableCell>
-                  <TableCell>{new Date(rating.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{rating.category}</TableCell>
-                  <TableCell>{rating.score}</TableCell>
-                  <TableCell align="right">
+                  <TableCell>{rating.patient?.name || 'N/A'}</TableCell>
+                  <TableCell>{rating.overallRating?.score || 'N/A'}</TableCell>
+                  <TableCell>
+                    {rating.evaluationPeriod?.startDate && rating.evaluationPeriod?.endDate
+                      ? `${new Date(rating.evaluationPeriod.startDate).toLocaleDateString()} - ${new Date(rating.evaluationPeriod.endDate).toLocaleDateString()}`
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
                     <IconButton
-                      onClick={() => navigate(`/ratings/${rating._id}`)}
-                      color="primary"
-                      title="View Rating"
-                    >
-                      <ViewIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => navigate(`/ratings/${rating._id}/edit`)}
-                      color="primary"
-                      title="Edit Rating"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDelete(rating._id)}
                       color="error"
+                      onClick={() => handleDelete(rating._id)}
                       title="Delete Rating"
                     >
                       <DeleteIcon />

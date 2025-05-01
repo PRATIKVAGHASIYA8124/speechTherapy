@@ -29,40 +29,88 @@ const PendingApprovals = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchPendingApprovals = async () => {
+    const fetchPendingItems = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get('/approvals/pending');
-        setPendingItems(response.data);
+        
+        // Fetch pending therapy plans
+        const therapyPlansResponse = await api.get('/therapy-plans?status=pending_approval');
+        const therapyPlans = therapyPlansResponse.data.map(plan => ({
+          id: plan._id,
+          type: 'Therapy Plan',
+          submittedBy: plan.therapist?.name || 'Unknown Therapist',
+          patientName: plan.patient?.name || 'Unknown Patient',
+          submissionDate: plan.createdAt,
+          status: plan.status,
+          item: plan
+        }));
+
+        // Fetch pending progress reports
+        const progressReportsResponse = await api.get('/progress-reports?status=pending_approval');
+        const progressReports = progressReportsResponse.data.map(report => ({
+          id: report._id,
+          type: 'Progress Report',
+          submittedBy: report.therapist?.name || 'Unknown Therapist',
+          patientName: report.patient?.name || 'Unknown Patient',
+          submissionDate: report.createdAt,
+          status: report.status,
+          item: report
+        }));
+
+        setPendingItems([...therapyPlans, ...progressReports]);
       } catch (err) {
-        console.error('Failed to fetch pending approvals:', err);
+        console.error('Failed to fetch pending items:', err);
         setError('Failed to load pending approvals');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPendingApprovals();
+    fetchPendingItems();
   }, [api]);
 
-  const handleApprove = async (id) => {
+  const handleApprove = async (id, type) => {
     try {
-      await api.post(`/approvals/${id}/approve`);
-      setPendingItems(pendingItems.filter(item => item.id !== id));
+      const endpoint = type === 'Therapy Plan' ? '/therapy-plans' : '/progress-reports';
+      const response = await api.put(`${endpoint}/${id}/approve`, {
+        feedback: 'Approved by supervisor'
+      });
+      
+      if (response.data) {
+        setPendingItems(pendingItems.filter(item => item.id !== id));
+      } else {
+        setError('Failed to approve item. Please try again.');
+      }
     } catch (err) {
       console.error('Failed to approve item:', err);
-      setError('Failed to approve item');
+      setError(err.response?.data?.message || 'Failed to approve item. Please try again.');
     }
   };
 
-  const handleReject = async (id) => {
+  const handleReject = async (id, type) => {
     try {
-      await api.post(`/approvals/${id}/reject`);
-      setPendingItems(pendingItems.filter(item => item.id !== id));
+      const endpoint = type === 'Therapy Plan' ? '/therapy-plans' : '/progress-reports';
+      const response = await api.put(`${endpoint}/${id}/reject`, {
+        feedback: 'Rejected by supervisor'
+      });
+      
+      if (response.data) {
+        setPendingItems(pendingItems.filter(item => item.id !== id));
+      } else {
+        setError('Failed to reject item. Please try again.');
+      }
     } catch (err) {
       console.error('Failed to reject item:', err);
-      setError('Failed to reject item');
+      setError(err.response?.data?.message || 'Failed to reject item. Please try again.');
+    }
+  };
+
+  const handleView = (item) => {
+    if (item.type === 'Therapy Plan') {
+      window.open(`/therapy-plans/${item.id}`, '_blank');
+    } else {
+      window.open(`/progress-reports/${item.id}`, '_blank');
     }
   };
 
@@ -134,7 +182,7 @@ const PendingApprovals = () => {
                         <Button
                           size="small"
                           startIcon={<ViewIcon />}
-                          onClick={() => {/* Handle view */}}
+                          onClick={() => handleView(item)}
                         >
                           View
                         </Button>
@@ -142,7 +190,7 @@ const PendingApprovals = () => {
                           size="small"
                           color="success"
                           startIcon={<ApproveIcon />}
-                          onClick={() => handleApprove(item.id)}
+                          onClick={() => handleApprove(item.id, item.type)}
                         >
                           Approve
                         </Button>
@@ -150,7 +198,7 @@ const PendingApprovals = () => {
                           size="small"
                           color="error"
                           startIcon={<RejectIcon />}
-                          onClick={() => handleReject(item.id)}
+                          onClick={() => handleReject(item.id, item.type)}
                         >
                           Reject
                         </Button>

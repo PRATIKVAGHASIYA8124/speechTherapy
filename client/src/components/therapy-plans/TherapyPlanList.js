@@ -19,7 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const TherapyPlanList = () => {
   const navigate = useNavigate();
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [therapyPlans, setTherapyPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,13 +63,15 @@ const TherapyPlanList = () => {
         <Typography variant="h4" component="h1">
           Therapy Plans
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleCreateNew}
-        >
-          Create New Plan
-        </Button>
+        {user.role === 'therapist' && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCreateNew}
+          >
+            Create New Plan
+          </Button>
+        )}
       </Box>
 
       {error && (
@@ -86,13 +88,13 @@ const TherapyPlanList = () => {
               <TableCell>Start Date</TableCell>
               <TableCell>End Date</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              {user.role === 'therapist' && <TableCell>Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {therapyPlans.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={user.role === 'therapist' ? 5 : 4} align="center">
                   No therapy plans found
                 </TableCell>
               </TableRow>
@@ -103,15 +105,17 @@ const TherapyPlanList = () => {
                   <TableCell>{new Date(plan.startDate).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(plan.endDate).toLocaleDateString()}</TableCell>
                   <TableCell>{plan.status}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleEdit(plan._id)}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
+                  {user.role === 'therapist' && (
+                    <TableCell>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleEdit(plan._id)}
+                      >
+                        Edit
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
